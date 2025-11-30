@@ -105,15 +105,15 @@ except ImportError:
 class ChromecastVolumeController:
     def __init__(self, device_name="AceituTele", 
                  sample_rate=44100, 
-                 chunk_duration=0.5,  # Increased from 0.3 for more spectral information
+                 chunk_duration=0.4,  # Optimized for 6m distance: faster response (was 0.5)
                  volume_min=20,
-                 volume_max=80,
-                 volume_baseline_max=70,  # Maximum baseline volume that will never be exceeded
-                 target_db=-20,
-                 threshold_loud=-15,
-                 threshold_quiet=-35,
-                 adjustment_step=5,
-                 smoothing_window=7):  # Increased from 5 for better averaging with weak signals
+                 volume_max=85,  # Increased for weak signals at 6m distance (was 80)
+                 volume_baseline_max=75,  # Increased for weak signals at 6m distance (was 70)
+                 target_db=-25,  # Adjusted for 6m distance attenuation (~15.5 dB loss, was -20)
+                 threshold_loud=-20,  # Adjusted for 6m distance (was -15)
+                 threshold_quiet=-45,  # Adjusted for 6m distance (was -35)
+                 adjustment_step=6,  # Increased for weak signals (was 5)
+                 smoothing_window=5):  # Optimized for 6m distance: faster response (was 7)
         """
         Initializes the Chromecast volume controller.
         
@@ -155,7 +155,7 @@ class ChromecastVolumeController:
         self.current_volume = None
         self.running = True
         self.last_adjustment_time = 0
-        self.min_adjustment_interval = 0.5  # Wait at least 0.5 seconds between adjustments (faster)
+        self.min_adjustment_interval = 0.3  # Optimized for 6m distance: faster response (was 0.5)
         
         # Manual volume control (override)
         self.manual_adjustment_time = 0
@@ -425,13 +425,14 @@ class ChromecastVolumeController:
                 - 'confidence': 0.0 to 1.0
                 - 'features': dict with audio characteristics
         """
-        # Normalize audio to compensate for weak signals (useful when far away)
+        # Normalize audio to compensate for weak signals (optimized for 6m distance)
         # This helps maintain relative spectral characteristics even with weak signal
         audio_rms = np.sqrt(np.mean(audio_data**2))
         if audio_rms > 0:
             # Normalize to a standard level for more stable spectral analysis
-            normalization_factor = 0.1 / audio_rms  # Normalize to ~0.1 RMS
-            audio_data_normalized = audio_data * min(normalization_factor, 10.0)  # Limit amplification
+            # Increased target RMS for 6m distance (more amplification needed)
+            normalization_factor = 0.15 / audio_rms  # Normalize to ~0.15 RMS (was 0.1)
+            audio_data_normalized = audio_data * min(normalization_factor, 20.0)  # Increased limit for 6m (was 10.0)
         else:
             audio_data_normalized = audio_data
         
@@ -543,15 +544,16 @@ class ChromecastVolumeController:
         
         # Voice formants (500-2000 Hz) are VERY specific to dialogue
         # BUT only if there is NOT much background music (if there is background music, it's a sung song)
-        if voice_formants_ratio > 0.10 and background_music_ratio < 0.25:  # Voice without background music
+        # Optimized for 6m distance: more sensitive thresholds
+        if voice_formants_ratio > 0.08 and background_music_ratio < 0.20:  # More sensitive (was 0.10 and 0.25)
             dialogue_score += 0.8  # Very high weight - most important characteristic
-        elif voice_formants_ratio > 0.10:  # There is voice but also background music
+        elif voice_formants_ratio > 0.08:  # More sensitive (was 0.10)
             dialogue_score += 0.3  # Reduced weight - probably a sung song
-        if voice_formants_ratio > 0.15 and background_music_ratio < 0.20:
+        if voice_formants_ratio > 0.12 and background_music_ratio < 0.18:  # More sensitive (was 0.15 and 0.20)
             dialogue_score += 0.5
-        if voice_formants_ratio > 0.20 and background_music_ratio < 0.15:
+        if voice_formants_ratio > 0.18 and background_music_ratio < 0.12:  # More sensitive (was 0.20 and 0.15)
             dialogue_score += 0.3
-        if voice_formants_ratio > 0.25 and background_music_ratio < 0.10:
+        if voice_formants_ratio > 0.22 and background_music_ratio < 0.08:  # More sensitive (was 0.25 and 0.10)
             dialogue_score += 0.2
         
         # Dialogue has more energy in voice frequencies (200-4000 Hz)
@@ -595,12 +597,13 @@ class ChromecastVolumeController:
         
         # If there is voice BUT also much background music, it's a sung song
         # This is the key to distinguish sung songs from pure dialogue
-        if voice_formants_ratio > 0.10 and background_music_ratio > 0.25:
+        # Optimized for 6m distance: more sensitive thresholds
+        if voice_formants_ratio > 0.08 and background_music_ratio > 0.20:  # More sensitive (was 0.10 and 0.25)
             # There is voice AND background music = sung song
             music_score += 0.8  # Very high weight - key characteristic
-        if voice_formants_ratio > 0.10 and background_music_ratio > 0.35:
+        if voice_formants_ratio > 0.08 and background_music_ratio > 0.30:  # More sensitive (was 0.10 and 0.35)
             music_score += 0.5
-        if voice_formants_ratio > 0.15 and background_music_ratio > 0.30:
+        if voice_formants_ratio > 0.12 and background_music_ratio > 0.25:  # More sensitive (was 0.15 and 0.30)
             music_score += 0.4
         
         # Much bass compared to voice (background music)
@@ -655,12 +658,14 @@ class ChromecastVolumeController:
         
         # Determine type and confidence
         # Priority: pure dialogue (without background music) vs sung songs (voice + music)
-        dialogue_threshold = 0.20  # VERY low - maximum priority on pure dialogue
-        music_threshold = 0.40  # Reduced to better detect sung songs
+        # Optimized for 6m distance: more sensitive thresholds for weak signals
+        dialogue_threshold = 0.15  # More sensitive for weak signals at 6m (was 0.20)
+        music_threshold = 0.35  # Slightly lower for better detection (was 0.40)
         
         # If there is voice BUT also significant background music, prioritize music
         # (it's a sung song, not pure dialogue)
-        if voice_formants_ratio > 0.10 and background_music_ratio > 0.25:
+        # Optimized for 6m distance: more sensitive thresholds
+        if voice_formants_ratio > 0.08 and background_music_ratio > 0.20:  # More sensitive (was 0.10 and 0.25)
             # There is voice AND background music = sung song
             if music_score > 0.30:  # Low threshold for sung songs
                 audio_type = 'music'
@@ -681,7 +686,7 @@ class ChromecastVolumeController:
         else:
             # If neither exceeds threshold but there is a clear preference, use that
             # Priority to dialogue if there is NO background music, music if there IS background music
-            if background_music_ratio > 0.25 and music_score > 0.25:
+            if background_music_ratio > 0.20 and music_score > 0.25:  # More sensitive (was 0.25)
                 # There is background music, prioritize music
                 audio_type = 'music'
                 confidence = music_score
@@ -717,8 +722,8 @@ class ChromecastVolumeController:
         current_time = time.time()
         
         # Detect total silence (very low audio level)
-        # Adjusted for weak signals captured from distance (6 meters)
-        is_silence = db_level < -60 or db_level == -np.inf  # More permissive: -60 dB instead of -50
+        # Optimized for 6m distance: more permissive threshold for weak signals
+        is_silence = db_level < -65 or db_level == -np.inf  # More permissive for 6m distance (was -60)
         
         audio_type = audio_type_info.get('type', 'unknown')
         confidence = audio_type_info.get('confidence', 0.0)
@@ -753,14 +758,14 @@ class ChromecastVolumeController:
             adjustment = int(self.adjustment_step * 2)
         
         # PRIORITY: If we detect dialogue, increase volume aggressively
-        # Very low threshold (0.25) to work with weak signals from distance
+        # Optimized for 6m distance: more aggressive for weak signals
         # Maximum priority: ensure dialogue is audible
         elif audio_type == 'dialogue' and confidence > 0.25:
-            # Increase volume for dialogue - VERY AGGRESSIVE
+            # Increase volume for dialogue - VERY AGGRESSIVE (optimized for 6m)
             # Maximum priority: dialogue must be heard well
             base_threshold = 0.25
-            # More aggressive multiplier: up to 3x when confidence = 1.0
-            multiplier = 1.5 + (confidence - base_threshold) * 2.0  # 1.5 to 3.0 when confidence = 1.0
+            # More aggressive multiplier for 6m distance: up to 3.5x when confidence = 1.0
+            multiplier = 2.0 + (confidence - base_threshold) * 3.0  # 2.0 to 3.5 when confidence = 1.0 (was 1.5 to 3.0)
             adjustment = int(self.adjustment_step * multiplier)
         
         # If we detect music, decrease volume moderately
