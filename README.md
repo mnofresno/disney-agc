@@ -236,6 +236,21 @@ The algorithm prioritizes dialogue detection to ensure speech is always audible,
 
 This project is provided as-is for personal use.
 
+## Fine-Tuning & Research
+
+For detailed information on optimizing parameters for your specific setup (e.g., MacBook Pro at 6 meters from TV), see:
+
+- **[TUNING_SUMMARY.md](TUNING_SUMMARY.md)**: Quick reference guide with recommended parameter changes
+- **[RESEARCH_AND_TUNING.md](RESEARCH_AND_TUNING.md)**: Complete research findings, technical details, and advanced tuning strategies
+
+### Key Research Areas Covered:
+- Human voice formant frequencies (500-2000 Hz)
+- Distance attenuation calculations (6 meters = ~15.5 dB loss)
+- EBU R 128 loudness standards
+- FFT and spectral analysis parameters
+- Adaptive normalization for weak signals
+- Formant-based dialogue detection
+
 ## Contributing
 
 Contributions are welcome! Areas for improvement:
@@ -244,4 +259,5 @@ Contributions are welcome! Areas for improvement:
 - Web interface for configuration
 - Better handling of mixed audio (dialogue + music)
 - Calibration mode for environment-specific tuning
+- Integration of EBU R 128 loudness measurement
 
