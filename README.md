@@ -63,15 +63,19 @@ No more remote control juggling. No more "CAN YOU TURN IT DOWN?!" interruptions.
 
 The script will attempt to auto-install dependencies, but you can also install them manually:
 
-**macOS:**
+**Production dependencies:**
 ```bash
-pip3 install --user numpy sounddevice pychromecast pynput
+pip3 install --user -r requirements.txt
 ```
 
-**Linux/Windows:**
+**Development dependencies (for testing/contributing):**
 ```bash
-pip3 install --user numpy sounddevice pychromecast keyboard
+pip3 install --user -r requirements-dev.txt
 ```
+
+**Platform-specific keyboard libraries:**
+- macOS: `pynput` (included in requirements.txt detection)
+- Linux/Windows: `keyboard` (included in requirements.txt detection)
 
 ### macOS Permissions
 
